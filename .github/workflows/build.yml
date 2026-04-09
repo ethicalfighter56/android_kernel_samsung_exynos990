@@ -24,7 +24,7 @@ jobs:
             libarchive-tools cpio lz4 zstd \
             p7zip-full jq xxd patchelf \
             gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
-            python3-setuptools python3-crypto \
+            python3-setuptools python3-cryptography \
             brotli libpcre2-dev protobuf-compiler
 
       - name: Free Disk Space
