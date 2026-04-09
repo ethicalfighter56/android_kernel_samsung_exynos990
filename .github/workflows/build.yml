@@ -1,4 +1,4 @@
-name: Build ArtisanKRNL
+name: Build ArtisanKRNL (Clang-16)
 
 on:
   workflow_dispatch:
@@ -10,42 +10,47 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [c2s, c2slte, c1s, c1slte, z3s, y2s, y2slte, x1s, x1slte, r8s]
+        target: [r8s]
 
     steps:
-      - name: Checkout source
+      - name: Checkout Kernel Source
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Set up build environment
+      - name: Install Build Dependencies
         run: |
-          sudo apt update
-          DEBIAN_FRONTEND=noninteractive sudo apt install -yq \
-            p7zip-full jq attr ccache clang ffmpeg golang \
-            libbrotli-dev libgtest-dev libprotobuf-dev libunwind-dev libpcre2-dev \
-            libzstd-dev linux-modules-extra-$(uname -r) lld protobuf-compiler webp \
-            curl xxd patchelf flex bison libarchive-tools build-essential pcre2-utils
-          sudo modprobe erofs f2fs
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          sudo apt update -y
+          sudo apt install -y bc bison build-essential ccache curl flex git libelf-dev \
+            libncurses-dev libssl-dev make python3 python3-pip p7zip-full xxd zip
 
-      - name: Free disk space
+      - name: Setup Clang 16 (r547379)
         run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo apt clean
+          mkdir -p toolchain/clang_16
+          cd toolchain/clang_16
+          echo "Downloading Clang 16..."
+          wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r547379.tar.gz -O clang.tar.gz
+          tar -xf clang.tar.gz
+          rm clang.tar.gz
+          echo "Clang 16 setup completed"
+          ls -la bin/ | head -n 10
 
-      - name: Make build script executable
+      - name: Make build.sh Executable
         run: chmod +x build.sh
 
-      - name: Build kernel (${{ matrix.target }})
+      - name: Build Kernel for ${{ matrix.target }}
         run: |
-          ./build.sh -m ${{ matrix.target }} -k y -r n
+          ./build.sh --model ${{ matrix.target }} --ksu y --recovery n
 
-      - name: Upload artifact (${{ matrix.target }})
+      - name: Upload Kernel ZIP (${{ matrix.target }})
         uses: actions/upload-artifact@v4
         with:
-          name: kernel-${{ matrix.target }}
-          path: build/out/${{ matrix.target }}/*.zip
+          name: ArtisanKRNL-${{ matrix.target }}
+          path: out/${{ matrix.target }}/*.zip
+          retention-days: 7
+
+      - name: Show Build Summary
+        run: |
+          echo "✅ Build completed for ${{ matrix.target }}"
+          ls -lh out/${{ matrix.target }}/*.zip
