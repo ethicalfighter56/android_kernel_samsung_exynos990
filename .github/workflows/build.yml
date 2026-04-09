@@ -1,4 +1,4 @@
-name: Build ArtisanKRNL
+name: Build ArtisanKRNL (r8s)
 
 on:
   workflow_dispatch:
@@ -7,45 +7,39 @@ jobs:
   build:
     runs-on: ubuntu-24.04
 
-    strategy:
-      fail-fast: false
-      matrix:
-        target: [c2s, c2slte, c1s, c1slte, z3s, y2s, y2slte, x1s, x1slte, r8s]
-
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: Set up build environment
+      - name: Install Dependencies
         run: |
           sudo apt update
           DEBIAN_FRONTEND=noninteractive sudo apt install -yq \
-            p7zip-full jq attr ccache clang ffmpeg golang \
-            libbrotli-dev libgtest-dev libprotobuf-dev libunwind-dev libpcre2-dev \
-            libzstd-dev linux-modules-extra-$(uname -r) lld protobuf-compiler webp \
-            curl xxd patchelf flex bison libarchive-tools build-essential pcre2-utils
-          sudo modprobe erofs f2fs
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            build-essential bc bison flex libssl-dev libelf-dev \
+            ccache clang lld llvm-dev \
+            git zip unzip curl python3 python3-pip \
+            libarchive-tools cpio lz4 zstd \
+            p7zip-full jq xxd patchelf \
+            gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
+            python3-setuptools python3-crypto \
+            brotli libpcre2-dev protobuf-compiler
 
-      - name: Free disk space
+      - name: Free Disk Space
         run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/share/dotnet /opt/ghc
           sudo apt clean
 
-      - name: Make build script executable
-        run: chmod +x build.sh
-
-      - name: Build kernel (${{ matrix.target }})
+      - name: Build Kernel (r8s)
         run: |
-          ./build.sh -m ${{ matrix.target }} -k y -r n
+          chmod +x build.sh
+          # Trigger build for r8s model with KernelSU enabled
+          ./build.sh -m r8s -k y -r n
 
-      - name: Upload artifact (${{ matrix.target }})
+      - name: Upload Flashable Zip
         uses: actions/upload-artifact@v4
         with:
-          name: kernel-${{ matrix.target }}
-          path: build/out/${{ matrix.target }}/*.zip
+          name: ArtisanKRNL-r8s-Release
+          path: out/r8s/*.zip
