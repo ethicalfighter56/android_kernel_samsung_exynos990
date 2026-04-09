@@ -47,4 +47,8 @@ jobs:
           # Building for r8s model with KernelSU enabled
           ./build.sh -m r8s -k y -r n
 
-      - name: Upload
+      - name: Upload Flashable Zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: ArtisanKRNL-r8s-Release
+          path: build/out/r8s/*.zip
