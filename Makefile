@@ -5,6 +5,9 @@ SUBLEVEL = 325
 EXTRAVERSION =
 NAME = "People's Front"
 
+LLVM := 1
+LLVM_IAS := 1
+
 # *DOCUMENTATION*
 # To see a list of typical targets execute "make help"
 # More info can be located in ./README
@@ -365,13 +368,18 @@ HOST_LFS_CFLAGS := $(shell getconf LFS_CFLAGS 2>/dev/null)
 HOST_LFS_LDFLAGS := $(shell getconf LFS_LDFLAGS 2>/dev/null)
 HOST_LFS_LIBS := $(shell getconf LFS_LIBS 2>/dev/null)
 
-ifneq ($(LLVM),)
+LLVM := 1
 HOSTCC	= clang
 HOSTCXX	= clang++
-else
-HOSTCC	= gcc
-HOSTCXX	= g++
-endif
+CC		= clang
+LD		= ld.lld
+AR		= llvm-ar
+NM		= llvm-nm
+OBJCOPY		= llvm-objcopy
+OBJDUMP		= llvm-objdump
+READELF		= llvm-readelf
+OBJSIZE		= llvm-size
+STRIP		= llvm-strip
 KBUILD_HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 \
 		-fomit-frame-pointer -std=gnu89 $(HOST_LFS_CFLAGS) \
 		$(HOSTCFLAGS)
@@ -391,6 +399,9 @@ OBJDUMP		= llvm-objdump
 READELF		= llvm-readelf
 OBJSIZE		= llvm-size
 STRIP		= llvm-strip
+AS		= clang
+LLVM_IAS	= 1
+export LLVM_IAS
 else
 CC		= $(CROSS_COMPILE)gcc
 LD		= $(CROSS_COMPILE)ld
@@ -471,7 +482,19 @@ export KBUILD_AFLAGS AFLAGS_KERNEL AFLAGS_MODULE
 export KBUILD_AFLAGS_MODULE KBUILD_CFLAGS_MODULE KBUILD_LDFLAGS_MODULE
 export KBUILD_AFLAGS_KERNEL KBUILD_CFLAGS_KERNEL
 export KBUILD_ARFLAGS
-
+ifeq ($(cc-name),clang)
+# Clang 18+ এর জন্য প্রয়োজনীয় ফ্ল্যাগ
+KBUILD_CFLAGS += -Wno-implicit-int-float-conversion
+KBUILD_CFLAGS += -Wno-initializer-overrides
+KBUILD_CFLAGS += -Wno-format-invalid-specifier
+KBUILD_CFLAGS += -Wno-gnu-empty-initializer
+KBUILD_CFLAGS += -fno-merge-all-constants
+KBUILD_CFLAGS += -fno-stack-check
+CLANG_FLAGS   += --target=$(notdir $(CROSS_COMPILE:%-=%))
+CLANG_FLAGS   += -no-integrated-as
+KBUILD_CFLAGS += $(CLANG_FLAGS)
+KBUILD_AFLAGS += $(CLANG_FLAGS)
+endif
 # When compiling out-of-tree modules, put MODVERDIR in the module
 # tree rather than in the kernel tree. The kernel tree might
 # even be read-only.
@@ -681,7 +704,7 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning, address-of-packed-member)
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS   += -Os
 else
-KBUILD_CFLAGS   += -O2
+KBUILD_CFLAGS   += -O3
 endif
 
 # Tell gcc to never replace conditional load with a non-conditional one
@@ -831,13 +854,10 @@ KBUILD_CFLAGS_KERNEL += -ffunction-sections -fdata-sections
 LDFLAGS_vmlinux += --gc-sections
 endif
 
-ifdef CONFIG_LTO_CLANG
-ifdef CONFIG_THINLTO
-lto-clang-flags	:= -flto=thin
-KBUILD_LDFLAGS	+= --thinlto-cache-dir=.thinlto-cache
-else
-lto-clang-flags	:= -flto
-endif
+# Clang 16 এর জন্য Optimized ThinLTO
+KBUILD_CFLAGS   += -flto=thin -fsplit-lto-unit
+KBUILD_LDFLAGS  += --thinlto-cache-dir=.thinlto-cache
+KBUILD_LDFLAGS  += -mllvm -import-instr-limit=5
 lto-clang-flags += -fvisibility=default $(call cc-option, -fsplit-lto-unit)
 
 # Limit inlining across translation units to reduce binary size
@@ -934,7 +954,11 @@ KBUILD_CFLAGS  += $(call cc-option,-fno-stack-check,)
 
 # conserve stack if available
 KBUILD_CFLAGS   += $(call cc-option,-fconserve-stack)
-
+# Clang 16 specific warning fixes
+KBUILD_CFLAGS += -Wno-implicit-int-float-conversion
+KBUILD_CFLAGS += -Wno-initializer-overrides
+KBUILD_CFLAGS += -Wno-format-invalid-specifier
+KBUILD_CFLAGS += -Wno-gnu-empty-initializer
 # disallow errors like 'EXPORT_GPL(foo);' with missing header
 KBUILD_CFLAGS   += $(call cc-option,-Werror=implicit-int)
 
