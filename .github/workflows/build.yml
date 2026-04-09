@@ -27,6 +27,15 @@ jobs:
             python3-setuptools python3-cryptography \
             brotli libpcre2-dev protobuf-compiler
 
+      - name: Setup Toolchain (Clang 18)
+        run: |
+          mkdir -p toolchain/clang_18
+          echo "Downloading AOSP Clang 18..."
+          curl -LSs "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r522817.tar.gz" -o clang.tar.gz
+          tar -xzf clang.tar.gz -C toolchain/clang_18
+          rm clang.tar.gz
+          echo "Toolchain extraction complete."
+
       - name: Free Disk Space
         run: |
           sudo rm -rf /usr/share/dotnet /opt/ghc
@@ -35,11 +44,7 @@ jobs:
       - name: Build Kernel (r8s)
         run: |
           chmod +x build.sh
-          # Trigger build for r8s model with KernelSU enabled
+          # Building for r8s model with KernelSU enabled
           ./build.sh -m r8s -k y -r n
 
-      - name: Upload Flashable Zip
-        uses: actions/upload-artifact@v4
-        with:
-          name: ArtisanKRNL-r8s-Release
-          path: out/r8s/*.zip
+      - name: Upload
