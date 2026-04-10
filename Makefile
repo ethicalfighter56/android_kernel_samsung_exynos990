@@ -391,9 +391,6 @@ OBJDUMP		= llvm-objdump
 READELF		= llvm-readelf
 OBJSIZE		= llvm-size
 STRIP		= llvm-strip
-AS		= clang
-LLVM_IAS	= 1
-export LLVM_IAS
 else
 CC		= $(CROSS_COMPILE)gcc
 LD		= $(CROSS_COMPILE)ld
@@ -474,19 +471,7 @@ export KBUILD_AFLAGS AFLAGS_KERNEL AFLAGS_MODULE
 export KBUILD_AFLAGS_MODULE KBUILD_CFLAGS_MODULE KBUILD_LDFLAGS_MODULE
 export KBUILD_AFLAGS_KERNEL KBUILD_CFLAGS_KERNEL
 export KBUILD_ARFLAGS
-ifeq ($(cc-name),clang)
-# Clang 18+ এর জন্য প্রয়োজনীয় ফ্ল্যাগ
-KBUILD_CFLAGS += -Wno-implicit-int-float-conversion
-KBUILD_CFLAGS += -Wno-initializer-overrides
-KBUILD_CFLAGS += -Wno-format-invalid-specifier
-KBUILD_CFLAGS += -Wno-gnu-empty-initializer
-KBUILD_CFLAGS += -fno-merge-all-constants
-KBUILD_CFLAGS += -fno-stack-check
-CLANG_FLAGS   += --target=$(notdir $(CROSS_COMPILE:%-=%))
-CLANG_FLAGS   += -no-integrated-as
-KBUILD_CFLAGS += $(CLANG_FLAGS)
-KBUILD_AFLAGS += $(CLANG_FLAGS)
-endif
+
 # When compiling out-of-tree modules, put MODVERDIR in the module
 # tree rather than in the kernel tree. The kernel tree might
 # even be read-only.
@@ -847,10 +832,6 @@ LDFLAGS_vmlinux += --gc-sections
 endif
 
 ifdef CONFIG_LTO_CLANG
-  # LTO Support Added
-  KBUILD_CFLAGS += -flto=thin
-  LDFLAGS_vmlinux += --lto-O3
-endif
 ifdef CONFIG_THINLTO
 lto-clang-flags	:= -flto=thin
 KBUILD_LDFLAGS	+= --thinlto-cache-dir=.thinlto-cache
@@ -1882,6 +1863,8 @@ ifneq ($(cmd_files),)
   $(cmd_files): ;	# Do not try to update included dependency files
   include $(cmd_files)
 endif
+
+endif	# skip-makefile
 
 PHONY += FORCE
 FORCE:
