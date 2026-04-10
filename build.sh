@@ -17,7 +17,7 @@ Options:
     -m, --model [value]    Specify the model code of the phone
     -k, --ksu [y/N]        Include KernelSU
     -r, --recovery [y/N]   Compile kernel for an Android Recovery
-    -d, --dtbs [y/N]	   Compile only DTBs
+    -d, --dtbs [y/N]       Compile only DTBs
 EOF
 }
 
@@ -63,10 +63,7 @@ if [ ! -f "$CLANG_DIR/bin/clang-14" ]; then
     rm -rf $CLANG_DIR
     mkdir -p $CLANG_DIR
     pushd $CLANG_DIR > /dev/null
-    curl -LJOk https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/tags/android-13.0.0_r13/clang-r450784d.tar.gz
-    tar xf android-13.0.0_r13-clang-r450784d.tar.gz
-    rm android-13.0.0_r13-clang-r450784d.tar.gz
-    echo "Cleaning up..."
+    git clone https://gitlab.com/clangsantoni/neutron-clang.git clang_14
     popd > /dev/null
 fi
 
@@ -129,7 +126,7 @@ if [[ "$KSU_OPTION" == "y" ]]; then
 fi
 
 if [[ "$DTB_OPTION" == "y" ]]; then
-	DTBS=y
+    DTBS=y
 fi
 
 rm -rf build/out/$MODEL
